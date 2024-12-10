@@ -4,7 +4,14 @@ import React from "react";
 export default function home() {
   return (
     <View>
-      <Text>home</Text>
+      <Text
+        style={{
+          fontSize: 40,
+          fontFamily: "poppins",
+        }}
+      >
+        anpulla KALAI naan thaan enna paln enga poovamneenga engb
+      </Text>
     </View>
   );
 }
