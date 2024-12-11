@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { View, Text } from "react-native";
 import { ClerkProvider, SignedIn, SignedOut } from "@clerk/clerk-expo";
 import LoginScreen from "../components/LoginScreen";
+import { tokenCache } from "@/cache";
 
 export default function RootLayout() {
   useFonts({
@@ -10,6 +11,7 @@ export default function RootLayout() {
   });
   return (
     <ClerkProvider
+      tokenCache={tokenCache}
       publishableKey={process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY}
     >
       <SignedIn>
