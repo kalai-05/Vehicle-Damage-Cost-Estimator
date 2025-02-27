@@ -27,16 +27,16 @@ export default function Header() {
         <Image
           source={{ uri: user?.imageUrl }}
           style={{
-            width: 45,
-            height: 45,
+            width: 68,
+            height: 68,
             borderRadius: 99,
           }}
         />
         <View>
           <Text
             style={{
-              fontSize: 20,
-              color: "#FFFFFF",
+              fontSize: 16,
+              color: "#000000",
               fontFamily: "poppins",
             }}
           >
@@ -44,35 +44,14 @@ export default function Header() {
           </Text>
           <Text
             style={{
-              color: "#FFFFFF",
+              fontSize: 20,
+              color: "#000000",
               fontFamily: "poppins",
             }}
           >
-            {user?.fullName}
+            {user?.fullName} 👋🏻
           </Text>
         </View>
-      </View>
-      <View
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          padding: 10,
-          gap: 10,
-          alignItems: "center",
-          backgroundColor: "#fff",
-          borderRadius: 10,
-          marginTop: 20,
-        }}
-      >
-        <MaterialIcons name="manage-search" size={24} color="black" />
-
-        <TextInput
-          placeholder="Search Here..!"
-          style={{
-            fontFamily: "poppins",
-            fontSize: 17,
-          }}
-        />
       </View>
     </View>
   );
