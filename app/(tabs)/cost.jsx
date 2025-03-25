@@ -1,11 +1,11 @@
 import { View, Text } from "react-native";
 import React from "react";
-import Profile from "../../components/Profile/profile";
+import CostPrediction from "../../components/Cost";
 
-export default function profile() {
+export default function cost() {
   return (
     <View>
-      <Profile />
+      <CostPrediction />
     </View>
   );
 }

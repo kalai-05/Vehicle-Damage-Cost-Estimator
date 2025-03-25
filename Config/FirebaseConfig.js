@@ -1,23 +1,19 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBQIO3YVpN1qo6OSVmzdORZFrpwjC2c1Po",
-  authDomain: "my-app-ccbeb.firebaseapp.com",
-  projectId: "my-app-ccbeb",
-  storageBucket: "my-app-ccbeb.firebasestorage.app",
-  messagingSenderId: "790441716157",
-  appId: "1:790441716157:web:0fad6c0cae629dcaf9cad4",
-  measurementId: "G-55PP3C2NLY",
+  apiKey: "AIzaSyDEHhySA-v-Pk5eydPVDxW-wGhpj9G_GQ4",
+  authDomain: "hems-fd244.firebaseapp.com",
+  databaseURL: "https://hems-fd244-default-rtdb.firebaseio.com",
+  projectId: "hems-fd244",
+  storageBucket: "hems-fd244.appspot.com",
+  messagingSenderId: "36487013943",
+  appId: "1:36487013943:web:7837de4c0ff3aa4dcfc1b2",
+  measurementId: "G-QTC7XN51QH",
 };
 
-// Initialize Firebase
-export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-//const analytics = getAnalytics(app);
+// Check if Firebase is already initialized
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+export { db };
