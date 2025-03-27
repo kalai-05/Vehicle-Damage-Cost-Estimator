@@ -12,6 +12,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 export default function TabLayout() {
 
   return (
+   
 
     <Tabs
 
