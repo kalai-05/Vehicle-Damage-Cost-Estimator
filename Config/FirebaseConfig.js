@@ -2,14 +2,13 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDEHhySA-v-Pk5eydPVDxW-wGhpj9G_GQ4",
-  authDomain: "hems-fd244.firebaseapp.com",
-  databaseURL: "https://hems-fd244-default-rtdb.firebaseio.com",
-  projectId: "hems-fd244",
-  storageBucket: "hems-fd244.appspot.com",
-  messagingSenderId: "36487013943",
-  appId: "1:36487013943:web:7837de4c0ff3aa4dcfc1b2",
-  measurementId: "G-QTC7XN51QH",
+  apiKey: "AIzaSyCXEaIC9jB_Q-kA4X4UICfLqJUWB0e1uwQ",
+  authDomain: "crash-7590a.firebaseapp.com",
+  projectId: "crash-7590a",
+  storageBucket: "crash-7590a.firebasestorage.app",
+  messagingSenderId: "5763030285",
+  appId: "1:5763030285:web:08e7c3bbe18466879a2444",
+  measurementId: "G-5B7GQVXTTM",
 };
 
 // Check if Firebase is already initialized

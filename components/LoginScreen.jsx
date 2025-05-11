@@ -1,3 +1,4 @@
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -5,15 +6,18 @@ import {
   TouchableOpacity,
   Dimensions,
   StyleSheet,
+  Animated,
+  Easing,
 } from "react-native";
-import React from "react";
 import * as WebBrowser from "expo-web-browser";
 import { useOAuth } from "@clerk/clerk-expo";
+import { LinearGradient } from "expo-linear-gradient";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
 
 export const useWarmUpBrowser = () => {
-  React.useEffect(() => {
+  useEffect(() => {
     void WebBrowser.warmUpAsync();
     return () => {
       void WebBrowser.coolDownAsync();
@@ -25,13 +29,38 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   useWarmUpBrowser();
-
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+  // Animation values
+  const fadeAnim = new Animated.Value(0);
+  const slideAnim = new Animated.Value(30);
+  const scaleAnim = new Animated.Value(0.8);
+
+  useEffect(() => {
+    // Start animations when component mounts
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        friction: 4,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const onPress = React.useCallback(async () => {
     try {
       const { createdSessionId, setActive } = await startOAuthFlow();
-
       if (createdSessionId) {
         setActive({ session: createdSessionId });
       }
@@ -41,39 +70,82 @@ export default function LoginScreen() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.imageContainer}>
+    <LinearGradient colors={["#001f3d", "#003366"]} style={styles.container}>
+      {/* Animated Logo */}
+      <Animated.View
+        style={[
+          styles.imageContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+          },
+        ]}
+      >
         <Image
-          source={require("../assets/images/login.png")}
+          source={require("../assets/images/logo.png")}
           style={styles.loginImage}
           resizeMode="contain"
         />
-      </View>
+      </Animated.View>
 
-      <View style={styles.contentContainer}>
+      {/* Content */}
+      <Animated.View
+        style={[
+          styles.contentContainer,
+          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+        ]}
+      >
         <Text style={styles.titleText}>
           Your{" "}
           <Text style={styles.highlightText}>
-            Smart Home Electricity Management{" "}
+            Vehicle Damage Cost Estimator
           </Text>
-          Companion
         </Text>
         <Text style={styles.subtitleText}>
-          Track, Analyze, and Control Your Home's Electricity—Save Energy, Save
-          Money!
+          Get instant repair estimates, find affordable parts, and connect with
+          trusted repair shops
         </Text>
-        <TouchableOpacity style={styles.loginButton} onPress={onPress}>
-          <Text style={styles.buttonText}>Let's Get Started</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+
+        {/* Login Button with animation */}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <TouchableOpacity
+            style={styles.loginButton}
+            onPress={onPress}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={["#0066cc", "#001f3d"]}
+              style={styles.gradientButton}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <MaterialIcons name="login" size={24} color="white" />
+              <Text style={styles.buttonText}>Continue with Google</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Additional options */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>By continuing, you agree to our</Text>
+          <View style={styles.linksContainer}>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Terms of Service</Text>
+            </TouchableOpacity>
+            <Text style={styles.footerText}> and </Text>
+            <TouchableOpacity>
+              <Text style={styles.linkText}>Privacy Policy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
     justifyContent: "center",
   },
   imageContainer: {
@@ -83,60 +155,80 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   loginImage: {
-    width: width * 0.8, // 80% of screen width
-    height: height * 0.3, // 30% of screen height
-    maxWidth: 400, // Maximum size for tablets
-    maxHeight: 300, // Maximum size for tablets
+    width: width * 0.8,
+    height: height * 0.3,
+    maxWidth: 400,
+    maxHeight: 300,
+    tintColor: "white", // Makes logo white to stand out against dark background
   },
   contentContainer: {
-    backgroundColor: "#ffffff",
-    padding: 25,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 10,
-    flex: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    padding: 30,
+    borderTopLeftRadius: 40,
+    borderTopRightRadius: 40,
+    marginTop: -20,
+    alignItems: "center",
+    backdropFilter: "blur(10px)",
   },
   titleText: {
-    fontFamily: "poppins",
-    fontSize: width > 400 ? 28 : 24, // Larger on tablets
+    fontSize: width > 400 ? 28 : 24,
     textAlign: "center",
     lineHeight: 34,
     marginBottom: 15,
-    color: "#333333",
+    color: "white",
+    fontWeight: "600",
   },
   highlightText: {
-    color: "#006666",
+    color: "#4ECDC4", // Teal accent color
     fontWeight: "bold",
   },
   subtitleText: {
-    fontFamily: "poppins",
     fontSize: width > 400 ? 16 : 14,
     textAlign: "center",
     paddingHorizontal: 20,
-    color: "#8f8f8f",
+    color: "rgba(255, 255, 255, 0.8)",
     marginBottom: 30,
     lineHeight: 22,
   },
   loginButton: {
-    backgroundColor: "#006666",
-    padding: 16,
-    borderRadius: 99,
-    marginHorizontal: 20,
-    shadowColor: "#006666",
+    width: width * 0.8,
+    borderRadius: 30,
+    overflow: "hidden",
+    marginBottom: 20,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 5,
   },
+  gradientButton: {
+    padding: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   buttonText: {
-    fontFamily: "poppins",
-    fontSize: width > 400 ? 22 : 20,
+    fontSize: width > 400 ? 18 : 16,
     textAlign: "center",
     color: "#ffffff",
     fontWeight: "600",
+    marginLeft: 10,
+  },
+  footer: {
+    alignItems: "center",
+    marginTop: 20,
+  },
+  footerText: {
+    color: "rgba(255, 255, 255, 0.6)",
+    fontSize: 12,
+  },
+  linksContainer: {
+    flexDirection: "row",
+    marginTop: 5,
+  },
+  linkText: {
+    color: "#4ECDC4",
+    fontSize: 12,
+    textDecorationLine: "underline",
   },
 });

@@ -14,13 +14,38 @@ export default function ProfileScreen() {
   const { user } = useUser();
   const { signOut } = useAuth();
 
-  // Mock data for energy savings
-  const energyStats = {
-    totalSaved: 1245, // kWh
-    monthlyAverage: 87,
-    carbonReduction: 345, // kg
-    efficiencyRating: "B+",
+  // Mock data for damage estimation history
+  const damageStats = {
+    totalEstimates: 24,
+    averageCost: 875, // $
+    accuracyRating: "92%",
+    favoriteVehicle: "Toyota Camry",
   };
+
+  // Recent estimates mock data
+  const recentEstimates = [
+    {
+      id: 1,
+      vehicle: "Honda Civic",
+      cost: "$1,245",
+      date: "2023-05-15",
+      part: "Front Bumper",
+    },
+    {
+      id: 2,
+      vehicle: "Ford F-150",
+      cost: "$875",
+      date: "2023-05-10",
+      part: "Passenger Door",
+    },
+    {
+      id: 3,
+      vehicle: "Toyota Camry",
+      cost: "$420",
+      date: "2023-05-05",
+      part: "Rear Light",
+    },
+  ];
 
   return (
     <ScrollView
@@ -32,7 +57,7 @@ export default function ProfileScreen() {
         <View style={styles.profileImageContainer}>
           <Image source={{ uri: user?.imageUrl }} style={styles.profileImage} />
           <View style={styles.verifiedBadge}>
-            <MaterialIcons name="verified" size={20} color="#006666" />
+            <MaterialIcons name="verified" size={20} color="#001f3d" />
           </View>
         </View>
         <Text style={styles.name}>{user?.fullName}</Text>
@@ -41,84 +66,68 @@ export default function ProfileScreen() {
         </Text>
       </View>
 
-      {/* Energy Stats Cards */}
+      {/* Damage Stats Cards */}
       <View style={styles.statsContainer}>
-        <Text style={styles.sectionTitle}>Your Energy Impact</Text>
+        <Text style={styles.sectionTitle}>Your Damage Analytics</Text>
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: "#e0f2f1" }]}>
-              <FontAwesome name="bolt" size={20} color="#006666" />
+            <View style={[styles.statIcon, { backgroundColor: "#e6f2ff" }]}>
+              <FontAwesome name="car" size={20} color="#001f3d" />
             </View>
-            <Text style={styles.statValue}>{energyStats.totalSaved} kWh</Text>
-            <Text style={styles.statLabel}>Total Saved</Text>
+            <Text style={styles.statValue}>{damageStats.totalEstimates}</Text>
+            <Text style={styles.statLabel}>Total Estimates</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: "#e0f2f1" }]}>
-              <Ionicons name="leaf-outline" size={20} color="#006666" />
+            <View style={[styles.statIcon, { backgroundColor: "#e6f2ff" }]}>
+              <Ionicons name="cash-outline" size={20} color="#001f3d" />
             </View>
-            <Text style={styles.statValue}>
-              {energyStats.carbonReduction} kg
-            </Text>
-            <Text style={styles.statLabel}>CO₂ Reduced</Text>
+            <Text style={styles.statValue}>${damageStats.averageCost}</Text>
+            <Text style={styles.statLabel}>Avg. Repair Cost</Text>
           </View>
         </View>
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: "#e0f2f1" }]}>
-              <MaterialIcons name="equalizer" size={20} color="#006666" />
+            <View style={[styles.statIcon, { backgroundColor: "#e6f2ff" }]}>
+              <MaterialIcons
+                name="precision-manufacturing"
+                size={20}
+                color="#001f3d"
+              />
             </View>
-            <Text style={styles.statValue}>
-              {energyStats.monthlyAverage} kWh
-            </Text>
-            <Text style={styles.statLabel}>Monthly Avg</Text>
+            <Text style={styles.statValue}>{damageStats.accuracyRating}</Text>
+            <Text style={styles.statLabel}>Estimate Accuracy</Text>
           </View>
 
           <View style={styles.statCard}>
-            <View style={[styles.statIcon, { backgroundColor: "#e0f2f1" }]}>
-              <MaterialIcons name="star" size={20} color="#006666" />
+            <View style={[styles.statIcon, { backgroundColor: "#e6f2ff" }]}>
+              <MaterialIcons name="favorite" size={20} color="#001f3d" />
             </View>
-            <Text style={styles.statValue}>{energyStats.efficiencyRating}</Text>
-            <Text style={styles.statLabel}>Efficiency</Text>
+            <Text style={styles.statValue}>{damageStats.favoriteVehicle}</Text>
+            <Text style={styles.statLabel}>Most Scanned</Text>
           </View>
         </View>
       </View>
 
-      {/* User Details */}
+      {/* Recent Estimates */}
       <View style={styles.detailsCard}>
-        <Text style={styles.sectionTitle}>Account Details</Text>
+        <Text style={styles.sectionTitle}>Recent Estimates</Text>
 
-        <View style={styles.detailRow}>
-          <View style={styles.detailIcon}>
-            <MaterialIcons name="cake" size={20} color="#006666" />
-          </View>
-          <Text style={styles.label}>Birthday:</Text>
-          <Text style={styles.value}>
-            {user?.birthday
-              ? new Date(user.birthday).toDateString()
-              : "Not set"}
-          </Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIcon}>
-            <MaterialIcons name="event" size={20} color="#006666" />
-          </View>
-          <Text style={styles.label}>Joined on:</Text>
-          <Text style={styles.value}>
-            {new Date(user?.createdAt).toDateString()}
-          </Text>
-        </View>
-
-        <View style={styles.detailRow}>
-          <View style={styles.detailIcon}>
-            <MaterialIcons name="security" size={20} color="#006666" />
-          </View>
-          <Text style={styles.label}>Account Status:</Text>
-          <Text style={[styles.value, { color: "#27ae60" }]}>Verified</Text>
-        </View>
+        {recentEstimates.map((estimate) => (
+          <TouchableOpacity key={estimate.id} style={styles.estimateItem}>
+            <View style={styles.estimateIcon}>
+              <FontAwesome name="car" size={20} color="#001f3d" />
+            </View>
+            <View style={styles.estimateDetails}>
+              <Text style={styles.estimateVehicle}>{estimate.vehicle}</Text>
+              <Text style={styles.estimatePart}>{estimate.part}</Text>
+              <Text style={styles.estimateDate}>{estimate.date}</Text>
+            </View>
+            <Text style={styles.estimateCost}>{estimate.cost}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* Quick Actions */}
@@ -127,25 +136,25 @@ export default function ProfileScreen() {
 
         <TouchableOpacity style={styles.actionButton}>
           <View style={styles.actionIcon}>
-            <MaterialIcons name="settings" size={24} color="#006666" />
+            <MaterialIcons name="history" size={24} color="#001f3d" />
           </View>
-          <Text style={styles.actionText}>App Settings</Text>
+          <Text style={styles.actionText}>Estimate History</Text>
           <MaterialIcons name="chevron-right" size={24} color="#95a5a6" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton}>
           <View style={styles.actionIcon}>
-            <MaterialIcons name="help-outline" size={24} color="#006666" />
+            <MaterialIcons name="garage" size={24} color="#001f3d" />
           </View>
-          <Text style={styles.actionText}>Help & Support</Text>
+          <Text style={styles.actionText}>My Vehicles</Text>
           <MaterialIcons name="chevron-right" size={24} color="#95a5a6" />
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton}>
           <View style={styles.actionIcon}>
-            <MaterialIcons name="share" size={24} color="#006666" />
+            <MaterialIcons name="location-on" size={24} color="#001f3d" />
           </View>
-          <Text style={styles.actionText}>Share App</Text>
+          <Text style={styles.actionText}>Nearby Repair Shops</Text>
           <MaterialIcons name="chevron-right" size={24} color="#95a5a6" />
         </TouchableOpacity>
       </View>
@@ -161,7 +170,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: "#f0f4f8",
+    backgroundColor: "#f5f8fa",
   },
   contentContainer: {
     padding: 16,
@@ -180,7 +189,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 3,
-    borderColor: "#006666",
+    borderColor: "#001f3d",
   },
   verifiedBadge: {
     position: "absolute",
@@ -194,7 +203,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#006666",
+    color: "#001f3d",
     marginBottom: 5,
   },
   email: {
@@ -204,7 +213,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#006666",
+    color: "#001f3d",
     marginBottom: 15,
   },
   statsContainer: {
@@ -238,7 +247,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#2c3e50",
+    color: "#001f3d",
     marginBottom: 5,
   },
   statLabel: {
@@ -256,25 +265,43 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  detailRow: {
+  estimateItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 15,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ecf0f1",
   },
-  detailIcon: {
-    marginRight: 10,
+  estimateIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#e6f2ff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
-  label: {
-    fontSize: 16,
-    color: "#7f8c8d",
-    marginRight: 10,
-    flexGrow: 1,
+  estimateDetails: {
+    flex: 1,
   },
-  value: {
+  estimateVehicle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2c3e50",
-    flexGrow: 2,
+    color: "#001f3d",
+  },
+  estimatePart: {
+    fontSize: 14,
+    color: "#7f8c8d",
+  },
+  estimateDate: {
+    fontSize: 12,
+    color: "#bdc3c7",
+    marginTop: 2,
+  },
+  estimateCost: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#e74c3c",
   },
   actionsCard: {
     backgroundColor: "#fff",
@@ -303,7 +330,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   logoutButton: {
-    backgroundColor: "#e74c3c",
+    backgroundColor: "#001f3d",
     borderRadius: 8,
     padding: 15,
     alignItems: "center",

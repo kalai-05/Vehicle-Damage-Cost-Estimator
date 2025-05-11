@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,189 +7,247 @@ import {
   ScrollView,
   Dimensions,
   Animated,
-  Easing,
+  Image,
 } from "react-native";
-import { ref, onValue, set } from "firebase/database";
-import { db } from "../../Config/FirebaseConfig";
-import { AnimatedCircularProgress } from "react-native-circular-progress";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import * as Animatable from "react-native-animatable";
+import { useNavigation } from "@react-navigation/native";
 
 const { width } = Dimensions.get("window");
 
-const Slider = () => {
-  const [current, setCurrent] = useState(0);
-  const [power, setPower] = useState(0);
-  const [energy, setEnergy] = useState(0);
-  const [relayState, setRelayState] = useState(false);
-  const buttonAnimation = new Animated.Value(0);
+const HomeScreen = () => {
+  const navigation = useNavigation();
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const bannerInterval = useRef(null);
+
+  // Banner data
+  const banners = [
+    {
+      id: 1,
+      title: "Instant Damage Assessment",
+      description: "Get accurate estimates in seconds",
+      image: require("../../assets/images/banner1.png"),
+    },
+    {
+      id: 2,
+      title: "Find Affordable Parts",
+      description: "Compare prices from local suppliers",
+      image: require("../../assets/images/banner2.png"),
+    },
+    {
+      id: 3,
+      title: "Certified Repair Shops",
+      description: "Connect with trusted professionals",
+      image: require("../../assets/images/banner3.png"),
+    },
+  ];
+
+  // Recent estimates data
+  const recentEstimates = [
+    {
+      id: 1,
+      vehicle: "Toyota Camry 2020",
+      damageType: "Front Collision",
+      date: "Today, 10:30 AM",
+      estimate: "$1,250 - $1,800",
+    },
+    {
+      id: 2,
+      vehicle: "Honda Civic 2018",
+      damageType: "Side Scratch",
+      date: "Yesterday, 4:15 PM",
+      estimate: "$450 - $600",
+    },
+  ];
 
   useEffect(() => {
-    const currentRef = ref(db, "/energyData/current");
-    const powerRef = ref(db, "/energyData/power");
-    const energyRef = ref(db, "/energyData/energy");
-    const relayRef = ref(db, "/relay/state");
+    // Auto-scroll banners
+    bannerInterval.current = setInterval(() => {
+      setCurrentBannerIndex((prev) =>
+        prev === banners.length - 1 ? 0 : prev + 1
+      );
+    }, 5000);
 
-    onValue(currentRef, (snapshot) => setCurrent(snapshot.val() || 0));
-    onValue(powerRef, (snapshot) => setPower(snapshot.val() || 0));
-    onValue(energyRef, (snapshot) => setEnergy(snapshot.val() || 0));
-    onValue(relayRef, (snapshot) => setRelayState(snapshot.val() || false));
+    return () => clearInterval(bannerInterval.current);
   }, []);
 
-  const toggleRelay = () => {
-    const newRelayState = !relayState;
-    set(ref(db, "/relay/state"), newRelayState);
+  const renderBannerItem = ({ item, index }) => {
+    const inputRange = [
+      (index - 1) * width,
+      index * width,
+      (index + 1) * width,
+    ];
 
-    if (!newRelayState) {
-      setCurrent(0);
-      setPower(0);
-      setEnergy(0);
-    }
+    const scale = scrollX.interpolate({
+      inputRange,
+      outputRange: [0.9, 1, 0.9],
+      extrapolate: "clamp",
+    });
 
-    Animated.sequence([
-      Animated.timing(buttonAnimation, {
-        toValue: 1,
-        duration: 200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonAnimation, {
-        toValue: 0,
-        duration: 200,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
-
-  const buttonScale = buttonAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [1, 1.1],
-  });
-
-  return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Energy Monitoring</Text>
-      </View>
-
-      {/* Main Gauges */}
-      <View style={styles.gaugeRow}>
-        <View style={styles.gaugeCard}>
-          <AnimatedCircularProgress
-            size={width * 0.28}
-            width={12}
-            fill={(current / 30) * 100}
-            tintColor="#006666"
-            backgroundColor="#e0f2f1"
-            rotation={0}
-            lineCap="round"
-          >
-            {() => (
-              <View style={styles.gaugeTextContainer}>
-                <Text style={styles.gaugeValue}>{current.toFixed(2)}</Text>
-                <Text style={styles.gaugeUnit}>Amps</Text>
-              </View>
-            )}
-          </AnimatedCircularProgress>
-          <Text style={styles.gaugeLabel}>CURRENT</Text>
-        </View>
-
-        <View style={styles.gaugeCard}>
-          <AnimatedCircularProgress
-            size={width * 0.28}
-            width={12}
-            fill={(power / 5000) * 100}
-            tintColor="#e74c3c"
-            backgroundColor="#fde8e8"
-            rotation={0}
-            lineCap="round"
-          >
-            {() => (
-              <View style={styles.gaugeTextContainer}>
-                <Text style={styles.gaugeValue}>{power.toFixed(2)}</Text>
-                <Text style={styles.gaugeUnit}>Watts</Text>
-              </View>
-            )}
-          </AnimatedCircularProgress>
-          <Text style={styles.gaugeLabel}>POWER</Text>
-        </View>
-
-        <View style={styles.gaugeCard}>
-          <AnimatedCircularProgress
-            size={width * 0.28}
-            width={12}
-            fill={(energy / 100) * 100}
-            tintColor="#27ae60"
-            backgroundColor="#e8f8f0"
-            rotation={0}
-            lineCap="round"
-          >
-            {() => (
-              <View style={styles.gaugeTextContainer}>
-                <Text style={styles.gaugeValue}>{energy.toFixed(2)}</Text>
-                <Text style={styles.gaugeUnit}>kWh</Text>
-              </View>
-            )}
-          </AnimatedCircularProgress>
-          <Text style={styles.gaugeLabel}>ENERGY</Text>
-        </View>
-      </View>
-
-      {/* Usage Summary */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryRow}>
-          <MaterialIcons name="flash-on" size={24} color="#006666" />
-          <Text style={styles.summaryLabel}>Current Usage:</Text>
-          <Text style={styles.summaryValue}>{power.toFixed(2)} W</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <MaterialIcons name="timeline" size={24} color="#006666" />
-          <Text style={styles.summaryLabel}>Today's Consumption:</Text>
-          <Text style={styles.summaryValue}>{energy.toFixed(2)} kWh</Text>
-        </View>
-      </View>
-
-      {/* Device Control */}
-      <Animated.View
-        style={[styles.controlCard, { transform: [{ scale: buttonScale }] }]}
-      >
-        <View style={styles.controlHeader}>
-          <MaterialIcons name="lightbulb-outline" size={28} color="#006666" />
-          <Text style={styles.controlTitle}>Light Control</Text>
-        </View>
-
-        <View style={styles.controlBody}>
-          <Text
-            style={[
-              styles.controlStatus,
-              { color: relayState ? "#27ae60" : "#e74c3c" },
-            ]}
-          >
-            {relayState ? "ON" : "OFF"}
-          </Text>
-
-          <TouchableOpacity
-            style={[
-              styles.toggleButton,
-              { backgroundColor: relayState ? "#27ae60" : "#e0f2f1" },
-            ]}
-            onPress={toggleRelay}
-          >
-            <View
-              style={[
-                styles.toggleCircle,
-                {
-                  backgroundColor: "#fff",
-                  alignSelf: relayState ? "flex-end" : "flex-start",
-                },
-              ]}
-            />
-          </TouchableOpacity>
+    return (
+      <Animated.View style={[styles.bannerItem, { transform: [{ scale }] }]}>
+        <Image source={item.image} style={styles.bannerImage} />
+        <View style={styles.bannerOverlay} />
+        <View style={styles.bannerTextContainer}>
+          <Text style={styles.bannerTitle}>{item.title}</Text>
+          <Text style={styles.bannerDescription}>{item.description}</Text>
         </View>
       </Animated.View>
+    );
+  };
+
+  const renderEstimateItem = ({ item }) => (
+    <TouchableOpacity style={styles.estimateItem}>
+      <View style={styles.estimateContent}>
+        <Text style={styles.estimateVehicle}>{item.vehicle}</Text>
+        <Text style={styles.estimateDamage}>{item.damageType}</Text>
+        <View style={styles.estimateMeta}>
+          <Text style={styles.estimateDate}>{item.date}</Text>
+          <Text style={styles.estimateAmount}>{item.estimate}</Text>
+        </View>
+      </View>
+      <MaterialIcons name="chevron-right" size={24} color="#001f3d" />
+    </TouchableOpacity>
+  );
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Header */}
+      <Animatable.View animation="fadeIn" duration={800} style={styles.header}>
+        <Text style={styles.greeting}>Vehicle Damage Estimator</Text>
+        <Text style={styles.subtitle}>Accurate repair cost assessments</Text>
+      </Animatable.View>
+
+      {/* Auto-sliding Banner */}
+      <Animatable.View
+        animation="fadeInUp"
+        duration={1000}
+        style={styles.bannerContainer}
+      >
+        <Animated.FlatList
+          data={banners}
+          renderItem={renderBannerItem}
+          keyExtractor={(item) => item.id.toString()}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+            { useNativeDriver: true }
+          )}
+          scrollEventThrottle={16}
+          onMomentumScrollEnd={(e) => {
+            const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
+            setCurrentBannerIndex(newIndex);
+            clearInterval(bannerInterval.current);
+            bannerInterval.current = setInterval(() => {
+              setCurrentBannerIndex((prev) =>
+                prev === banners.length - 1 ? 0 : prev + 1
+              );
+            }, 5000);
+          }}
+          getItemLayout={(data, index) => ({
+            length: width,
+            offset: width * index,
+            index,
+          })}
+        />
+        <View style={styles.pagination}>
+          {banners.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.paginationDot,
+                currentBannerIndex === index && styles.paginationDotActive,
+              ]}
+            />
+          ))}
+        </View>
+      </Animatable.View>
+
+      {/* Main Action Button */}
+      <Animatable.View
+        animation="fadeInUp"
+        duration={800}
+        delay={200}
+        style={styles.mainActionContainer}
+      >
+        <TouchableOpacity
+          style={styles.mainActionButton}
+          onPress={() => navigation.navigate("cost")}
+        >
+          <View style={styles.mainActionIcon}>
+            <FontAwesome name="camera" size={28} color="#fff" />
+          </View>
+          <Text style={styles.mainActionText}>New Damage Assessment</Text>
+          <Text style={styles.mainActionSubtext}>
+            Take photos to estimate repair costs
+          </Text>
+        </TouchableOpacity>
+      </Animatable.View>
+
+      {/* Recent Estimates */}
+      <Animatable.View
+        animation="fadeInUp"
+        duration={800}
+        delay={400}
+        style={styles.section}
+      >
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Estimates</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>View All</Text>
+          </TouchableOpacity>
+        </View>
+
+        {recentEstimates.length > 0 ? (
+          recentEstimates.map((item) => (
+            <View key={item.id}>{renderEstimateItem({ item })}</View>
+          ))
+        ) : (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="history" size={40} color="#001f3d" />
+            <Text style={styles.emptyStateText}>No recent estimates</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Start by creating a new damage assessment
+            </Text>
+          </View>
+        )}
+      </Animatable.View>
+
+      {/* Quick Tips Section */}
+      <Animatable.View
+        animation="fadeInUp"
+        duration={800}
+        delay={600}
+        style={styles.section}
+      >
+        <Text style={styles.sectionTitle}>Quick Tips</Text>
+        <View style={styles.tipsContainer}>
+          <View style={styles.tipCard}>
+            <View style={[styles.tipIcon, { backgroundColor: "#e6f7ff" }]}>
+              <MaterialIcons name="photo-camera" size={24} color="#001f3d" />
+            </View>
+            <Text style={styles.tipText}>
+              Take clear photos from multiple angles for best results
+            </Text>
+          </View>
+
+          <View style={styles.tipCard}>
+            <View style={[styles.tipIcon, { backgroundColor: "#e6f7ff" }]}>
+              <MaterialIcons
+                name="lightbulb-outline"
+                size={24}
+                color="#001f3d"
+              />
+            </View>
+            <Text style={styles.tipText}>
+              Compare estimates from different repair shops
+            </Text>
+          </View>
+        </View>
+      </Animatable.View>
     </ScrollView>
   );
 };
@@ -197,148 +255,207 @@ const Slider = () => {
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: "#f0f4f8",
-  },
-  contentContainer: {
-    padding: 16,
+    backgroundColor: "#f5f8fa",
     paddingBottom: 30,
   },
   header: {
-    marginBottom: 20,
+    padding: 20,
+    paddingBottom: 10,
   },
-  title: {
-    fontSize: 24,
+  greeting: {
+    fontSize: 28,
     fontWeight: "bold",
-    color: "#006666",
-    textAlign: "center",
+    color: "#001f3d",
+    marginBottom: 5,
   },
-  gaugeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  gaugeCard: {
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 15,
-    width: "32%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  gaugeTextContainer: {
-    alignItems: "center",
-  },
-  gaugeValue: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2c3e50",
-  },
-  gaugeUnit: {
-    fontSize: 12,
+  subtitle: {
+    fontSize: 16,
     color: "#7f8c8d",
   },
-  gaugeLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#006666",
+  bannerContainer: {
+    height: 200,
+    marginBottom: 20,
+  },
+  bannerItem: {
+    width: width - 40,
+    height: 180,
+    borderRadius: 15,
+    marginHorizontal: 20,
+    overflow: "hidden",
+  },
+  bannerImage: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(20, 21, 21, 0.3)",
+  },
+  bannerTextContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+  },
+  bannerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  bannerDescription: {
+    fontSize: 16,
+    color: "#fff",
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 10,
   },
-  summaryCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(20, 21, 21, 0.3)",
+    marginHorizontal: 5,
   },
-  summaryRow: {
+  paginationDotActive: {
+    backgroundColor: "#001f3d",
+  },
+  section: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  sectionHeader: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 15,
   },
-  summaryLabel: {
-    fontSize: 16,
-    color: "#7f8c8d",
-    marginLeft: 10,
-    flexGrow: 1,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#001f3d",
   },
-  summaryValue: {
+  seeAll: {
+    color: "#001f3d",
+    fontSize: 14,
+  },
+  mainActionContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 25,
+  },
+  mainActionButton: {
+    backgroundColor: "#001f3d",
+    borderRadius: 15,
+    padding: 20,
+    alignItems: "center",
+    elevation: 3,
+  },
+  mainActionIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  mainActionText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+    textAlign: "center",
+  },
+  mainActionSubtext: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    textAlign: "center",
+  },
+  estimateItem: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    elevation: 1,
+  },
+  estimateContent: {
+    flex: 1,
+  },
+  estimateVehicle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2c3e50",
+    color: "#001f3d",
+    marginBottom: 3,
   },
-  controlCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  controlHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  controlTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#006666",
-    marginLeft: 10,
-  },
-  controlBody: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  controlStatus: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  toggleButton: {
-    width: 60,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  toggleCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-  },
-  actionsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  actionButton: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 15,
-    width: "32%",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  actionText: {
+  estimateDamage: {
     fontSize: 14,
-    color: "#006666",
-    marginTop: 5,
-    fontWeight: "500",
+    color: "#001f3d",
+    marginBottom: 8,
+  },
+  estimateMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  estimateDate: {
+    fontSize: 13,
+    color: "#7f8c8d",
+  },
+  estimateAmount: {
+    fontSize: 15,
+    fontWeight: "bold",
+    color: "#001f3d",
+  },
+  emptyState: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 1,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#7f8c8d",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: "#bdc3c7",
+    textAlign: "center",
+  },
+  tipsContainer: {
+    marginTop: 10,
+  },
+  tipCard: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    elevation: 1,
+  },
+  tipIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 15,
+    color: "#001f3d",
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 14,
+    color: "#001f3d",
   },
 });
 
-export default Slider;
+export default HomeScreen;

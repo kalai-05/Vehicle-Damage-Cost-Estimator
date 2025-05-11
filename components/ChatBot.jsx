@@ -171,7 +171,7 @@ const ChatBot = () => {
     try {
       scrollViewRef.current?.scrollToEnd({ animated: true });
 
-      const response = await fetch("http://192.168.63.213:5001/chat", {
+      const response = await fetch("http://192.168.234.70:4000/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -283,7 +283,7 @@ const ChatBot = () => {
             ))}
             {isLoading && (
               <View style={[styles.messageBubble, styles.botMessage]}>
-                <ActivityIndicator size="small" color="#006666" />
+                <ActivityIndicator size="small" color="#001f3d" />
               </View>
             )}
           </ScrollView>
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#006666",
+    backgroundColor: "#001f3d",
     justifyContent: "center",
     alignItems: "center",
     shadowColor: "#000",
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    backgroundColor: "#006666",
+    backgroundColor: "#001f3d",
   },
   chatTitle: {
     color: "#fff",
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
   },
   userMessage: {
     alignSelf: "flex-end",
-    backgroundColor: "#006666",
+    backgroundColor: "#001f3d",
     borderBottomRightRadius: 4,
   },
   messageText: {
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#006666",
+    backgroundColor: "#001f3d",
     justifyContent: "center",
     alignItems: "center",
   },

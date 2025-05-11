@@ -1,435 +1,686 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  Dimensions,
   TouchableOpacity,
+  Image,
+  Modal,
+  Animated,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
 } from "react-native";
-import { ref, onValue } from "firebase/database";
-import { db } from "../Config/FirebaseConfig";
-import { AnimatedCircularProgress } from "react-native-circular-progress";
-import { MaterialIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { MaterialIcons, FontAwesome } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import axios from "axios";
 
-// Sri Lanka Electricity Board tariff rates (as of 2023)
-const calculateCost = (units) => {
-  let cost = 0;
+const DamageCostEstimator = () => {
+  const [image, setImage] = useState(null);
+  const [result, setResult] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
 
-  if (units <= 30) {
-    cost = units * 8.0;
-  } else if (units <= 60) {
-    cost = 30 * 8.0 + (units - 30) * 10.0;
-  } else if (units <= 90) {
-    cost = 30 * 8.0 + 30 * 10.0 + (units - 60) * 16.0;
-  } else if (units <= 120) {
-    cost = 30 * 8.0 + 30 * 10.0 + 30 * 16.0 + (units - 90) * 50.0;
-  } else if (units <= 180) {
-    cost = 30 * 8.0 + 30 * 10.0 + 30 * 16.0 + 30 * 50.0 + (units - 120) * 75.0;
-  } else {
-    cost =
-      30 * 8.0 +
-      30 * 10.0 +
-      30 * 16.0 +
-      30 * 50.0 +
-      60 * 75.0 +
-      (units - 180) * 100.0;
-  }
+  const animateButtonPress = () => {
+    Animated.sequence([
+      Animated.timing(buttonScale, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(buttonScale, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
-  // Add fixed charges
-  if (units <= 30) cost += 120;
-  else if (units <= 60) cost += 240;
-  else if (units <= 90) cost += 480;
-  else if (units <= 120) cost += 720;
-  else if (units <= 180) cost += 1200;
-  else cost += 2400;
+  const pickImage = async () => {
+    if (Platform.OS !== "web") {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission required",
+          "Sorry, we need camera roll permissions to make this work!"
+        );
+        return;
+      }
+    }
 
-  return cost;
-};
-
-const CostPrediction = () => {
-  const [energy, setEnergy] = useState(0);
-  const [currentPower, setCurrentPower] = useState(0);
-  const [consumptionRate, setConsumptionRate] = useState(0);
-  const [lastUpdated, setLastUpdated] = useState(null);
-  const [activeTab, setActiveTab] = useState("current"); // 'current' or 'projected'
-
-  useEffect(() => {
-    const energyRef = ref(db, "/energyData/energy");
-    const powerRef = ref(db, "/energyData/power");
-    const timestampRef = ref(db, "/energyData/timestamp");
-
-    onValue(energyRef, (snapshot) => setEnergy(snapshot.val() || 0));
-    onValue(powerRef, (snapshot) => {
-      const powerInWatts = snapshot.val() || 0;
-      setCurrentPower(powerInWatts);
-      setConsumptionRate(powerInWatts / 1000);
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
     });
-    onValue(timestampRef, (snapshot) =>
-      setLastUpdated(new Date(snapshot.val()))
-    );
-  }, []);
 
-  // Cost calculations
-  const costPerMonth = calculateCost(energy);
-  const costPerDay = costPerMonth / 30;
-  const costPerHour = costPerDay / 24;
-  const projectedDailyUsage = consumptionRate * 24;
-  const projectedMonthlyUsage = consumptionRate * 24 * 30;
-  const projectedMonthlyCost = calculateCost(projectedMonthlyUsage);
-
-  const calculateTimeToThreshold = (threshold) => {
-    if (consumptionRate <= 0) return "N/A";
-    const remainingUnits = threshold - energy;
-    if (remainingUnits <= 0) return "Threshold reached";
-    const hours = remainingUnits / consumptionRate;
-    return hours < 24
-      ? `${hours.toFixed(1)} hours`
-      : `${(hours / 24).toFixed(1)} days`;
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+      setResult(null);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
-  const getTariffTier = () => {
-    if (energy <= 30) return { name: "Tier 1", color: "#27ae60" };
-    if (energy <= 60) return { name: "Tier 2", color: "#2ecc71" };
-    if (energy <= 90) return { name: "Tier 3", color: "#f39c12" };
-    if (energy <= 120) return { name: "Tier 4", color: "#e67e22" };
-    if (energy <= 180) return { name: "Tier 5", color: "#d35400" };
-    return { name: "Tier 6", color: "#e74c3c" };
+  const takePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission required",
+        "Sorry, we need camera permissions to make this work!"
+      );
+      return;
+    }
+
+    let result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setImage(result.assets[0].uri);
+      setResult(null);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
   };
 
-  const tariffTier = getTariffTier();
+  const removeImage = () => {
+    setImage(null);
+    setResult(null);
+    fadeAnim.setValue(0);
+  };
+
+  const estimateCost = async () => {
+    if (!image) {
+      Alert.alert("No Image", "Please upload an image first");
+      return;
+    }
+
+    animateButtonPress();
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: image,
+      name: "damage_image.jpg",
+      type: "image/jpeg",
+    });
+
+    try {
+      const response = await axios.post(
+        "http://192.168.234.70:4020/classify",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      const apiData = response.data;
+
+      // Format the API response
+      const apiResult = {
+        predictedClass: apiData.predicted_class || "Unknown Damage",
+        confidence: apiData.confidence
+          ? `${(apiData.confidence * 100).toFixed(1)}%`
+          : "N/A",
+        severity: apiData.cost_estimate?.severity || "Unknown",
+        repair: apiData.cost_estimate?.repair || "N/A",
+        replacement: apiData.cost_estimate?.replacement || "N/A",
+        nearbyShops: [
+          {
+            name: "Colombo Auto Care",
+            distance: "1.5 km",
+            rating: 4.7,
+            address: "123 Galle Road, Colombo 03",
+          },
+          {
+            name: "City Car Repairs",
+            distance: "2.3 km",
+            rating: 4.5,
+            address: "45 Union Place, Colombo 02",
+          },
+          {
+            name: "Lanka Vehicle Services",
+            distance: "3.1 km",
+            rating: 4.3,
+            address: "78 Havelock Road, Colombo 05",
+          },
+        ],
+      };
+
+      setResult(apiResult);
+      showResultModal();
+    } catch (error) {
+      console.error("API Error:", error);
+      Alert.alert("Error", "Failed to estimate damage cost. Please try again.");
+
+      // Fallback to simulated result if API fails
+      setResult({
+        predictedClass: "Glass Shatter",
+        confidence: "86.6%",
+        severity: "High",
+        repair: "Not repairable",
+        replacement: "$398-$1993",
+        nearbyShops: [
+          {
+            name: "Colombo Auto Care",
+            distance: "1.5 km",
+            rating: 4.7,
+            address: "123 Galle Road, Colombo 03",
+          },
+          {
+            name: "City Car Repairs",
+            distance: "2.3 km",
+            rating: 4.5,
+            address: "45 Union Place, Colombo 02",
+          },
+          {
+            name: "Lanka Vehicle Services",
+            distance: "3.1 km",
+            rating: 4.3,
+            address: "78 Havelock Road, Colombo 05",
+          },
+        ],
+      });
+      showResultModal();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showResultModal = () => {
+    setModalVisible(true);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const hideResultModal = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 300,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setModalVisible(false));
+  };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Cost Prediction</Text>
-      </View>
-
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "current" && styles.activeTab]}
-          onPress={() => setActiveTab("current")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "current" && styles.activeTabText,
-            ]}
-          >
-            Current Usage
+    <SafeAreaView style={{ flex: 1 }}>
+      <LinearGradient colors={["#f5f8fa", "#e6f2ff"]} style={styles.container}>
+        <View style={styles.content}>
+          <Text style={styles.title}>Damage Cost Estimator</Text>
+          <Text style={styles.subtitle}>
+            Upload an image of your vehicle damage to get an estimate
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === "projected" && styles.activeTab]}
-          onPress={() => setActiveTab("projected")}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "projected" && styles.activeTabText,
-            ]}
-          >
-            Projections
-          </Text>
-        </TouchableOpacity>
-      </View>
 
-      <View style={styles.gaugeContainer}>
-        <AnimatedCircularProgress
-          size={Dimensions.get("window").width * 0.6}
-          width={20}
-          fill={(energy / 500) * 100}
-          tintColor={tariffTier.color}
-          backgroundColor="#e0f2f1"
-          rotation={0}
-          lineCap="round"
-        >
-          {() => (
-            <View style={styles.gaugeTextContainer}>
-              <Text style={styles.energyValueText}>
-                {energy.toFixed(2)} kWh
-              </Text>
-              <Text style={styles.powerText}>{currentPower.toFixed(2)} W</Text>
-              <Text style={[styles.tariffText, { color: tariffTier.color }]}>
-                {tariffTier.name}
-              </Text>
+          {/* Image Upload Area */}
+          <View style={styles.uploadContainer}>
+            {image ? (
+              <View>
+                <TouchableOpacity onPress={() => setModalVisible(true)}>
+                  <Image
+                    source={{ uri: image }}
+                    style={styles.imagePreview}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.removeButton}
+                  onPress={removeImage}
+                >
+                  <MaterialIcons name="close" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.uploadPlaceholder}>
+                <FontAwesome name="car" size={50} color="#001f3d" />
+                <Text style={styles.uploadText}>No image selected</Text>
+              </View>
+            )}
+
+            <View style={styles.uploadButtons}>
+              <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                <MaterialIcons name="photo-library" size={24} color="#fff" />
+                <Text style={styles.buttonText}>Gallery</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.uploadButton} onPress={takePhoto}>
+                <MaterialIcons name="camera-alt" size={24} color="#fff" />
+                <Text style={styles.buttonText}>Camera</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={estimateCost}
+              disabled={loading || !image}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <MaterialIcons name="calculate" size={24} color="#fff" />
+                  <Text style={styles.buttonText}>Estimate Cost</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Results Preview */}
+          {result && (
+            <View style={styles.resultPreview}>
+              <Text style={styles.resultTitle}>Quick Estimate</Text>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Damage Type:</Text>
+                <Text style={styles.resultValue}>{result.predictedClass}</Text>
+              </View>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Confidence:</Text>
+                <Text style={styles.resultValue}>{result.confidence}</Text>
+              </View>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultLabel}>Severity:</Text>
+                <Text style={styles.resultValue}>{result.severity}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.detailsButton}
+                onPress={showResultModal}
+              >
+                <Text style={styles.detailsButtonText}>View Full Details</Text>
+              </TouchableOpacity>
             </View>
           )}
-        </AnimatedCircularProgress>
-        <Text style={styles.rateText}>
-          {consumptionRate.toFixed(4)} kWh/hour
-        </Text>
-      </View>
-
-      {activeTab === "current" ? (
-        <View style={styles.cardContainer}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons name="attach-money" size={24} color="#006666" />
-              <Text style={styles.cardTitle}>Current Billing</Text>
-            </View>
-
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Hourly Cost:</Text>
-              <Text style={styles.metricValue}>
-                {costPerHour.toFixed(2)} LKR
-              </Text>
-            </View>
-
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Daily Cost:</Text>
-              <Text style={styles.metricValue}>
-                {costPerDay.toFixed(2)} LKR
-              </Text>
-            </View>
-
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Monthly Cost:</Text>
-              <Text style={styles.metricValue}>
-                {costPerMonth.toFixed(2)} LKR
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons name="warning" size={24} color="#e74c3c" />
-              <Text style={styles.cardTitle}>Tariff Thresholds</Text>
-            </View>
-
-            <View style={styles.thresholdContainer}>
-              <View style={styles.thresholdRow}>
-                <Text style={styles.thresholdLabel}>60 units:</Text>
-                <Text style={styles.thresholdValue}>
-                  {calculateTimeToThreshold(60)}
-                </Text>
-              </View>
-              <View style={styles.thresholdRow}>
-                <Text style={styles.thresholdLabel}>90 units:</Text>
-                <Text style={styles.thresholdValue}>
-                  {calculateTimeToThreshold(90)}
-                </Text>
-              </View>
-              <View style={styles.thresholdRow}>
-                <Text style={styles.thresholdLabel}>120 units:</Text>
-                <Text style={styles.thresholdValue}>
-                  {calculateTimeToThreshold(120)}
-                </Text>
-              </View>
-              <View style={styles.thresholdRow}>
-                <Text style={styles.thresholdLabel}>180 units:</Text>
-                <Text style={styles.thresholdValue}>
-                  {calculateTimeToThreshold(180)}
-                </Text>
-              </View>
-            </View>
-          </View>
         </View>
-      ) : (
-        <View style={styles.cardContainer}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons name="trending-up" size={24} color="#006666" />
-              <Text style={styles.cardTitle}>Projected Usage</Text>
-            </View>
 
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Daily Usage:</Text>
-              <Text style={styles.metricValue}>
-                {projectedDailyUsage.toFixed(2)} kWh
-              </Text>
-            </View>
+        {/* Results Modal */}
+        <Modal
+          animationType="none"
+          transparent={true}
+          visible={modalVisible}
+          onRequestClose={hideResultModal}
+        >
+          <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+            <Animated.View
+              style={[
+                styles.modalContent,
+                { transform: [{ translateY: slideAnim }] },
+              ]}
+            >
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={hideResultModal}
+              >
+                <MaterialIcons name="close" size={24} color="#001f3d" />
+              </TouchableOpacity>
 
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Monthly Usage:</Text>
-              <Text style={styles.metricValue}>
-                {projectedMonthlyUsage.toFixed(2)} kWh
-              </Text>
-            </View>
-          </View>
+              <ScrollView contentContainerStyle={styles.modalScrollContent}>
+                <Text style={styles.modalTitle}>Damage Assessment</Text>
 
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <MaterialIcons name="money-off" size={24} color="#e74c3c" />
-              <Text style={styles.cardTitle}>Projected Costs</Text>
-            </View>
+                {image && (
+                  <Image
+                    source={{ uri: image }}
+                    style={styles.modalImage}
+                    resizeMode="contain"
+                  />
+                )}
 
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Daily Cost:</Text>
-              <Text style={styles.metricValue}>
-                {calculateCost(projectedDailyUsage).toFixed(2)} LKR
-              </Text>
-            </View>
+                <View style={styles.damageInfo}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Damage Type:</Text>
+                    <Text style={styles.infoValue}>
+                      {result?.predictedClass}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Confidence:</Text>
+                    <Text style={styles.infoValue}>{result?.confidence}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Severity:</Text>
+                    <Text
+                      style={[
+                        styles.infoValue,
+                        {
+                          color:
+                            result?.severity === "High"
+                              ? "#e74c3c"
+                              : result?.severity === "Medium"
+                              ? "#f39c12"
+                              : "#2ecc71",
+                        },
+                      ]}
+                    >
+                      {result?.severity}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Repair:</Text>
+                    <Text style={styles.infoValue}>{result?.repair}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Replacement Cost:</Text>
+                    <Text style={styles.infoValue}>{result?.replacement}</Text>
+                  </View>
+                </View>
 
-            <View style={styles.metricRow}>
-              <Text style={styles.metricLabel}>Monthly Cost:</Text>
-              <Text style={styles.metricValue}>
-                {projectedMonthlyCost.toFixed(2)} LKR
-              </Text>
-            </View>
-          </View>
-        </View>
-      )}
+                <Text style={styles.sectionTitle}>
+                  Recommended Repair Shops in Colombo
+                </Text>
+                <View style={styles.shopList}>
+                  {result?.nearbyShops.map((shop, index) => (
+                    <View key={index} style={styles.shopItem}>
+                      <View style={styles.shopInfo}>
+                        <Text style={styles.shopName}>{shop.name}</Text>
+                        <Text style={styles.shopAddress}>{shop.address}</Text>
+                        <Text style={styles.shopDistance}>
+                          {shop.distance} away • Rating: {shop.rating}
+                        </Text>
+                      </View>
+                      <View style={styles.ratingContainer}>
+                        <MaterialIcons name="star" size={16} color="#FFD700" />
+                      </View>
+                    </View>
+                  ))}
+                </View>
 
-      {lastUpdated && (
-        <Text style={styles.updateText}>
-          Last updated: {lastUpdated.toLocaleTimeString()}
-        </Text>
-      )}
-    </ScrollView>
+                <TouchableOpacity
+                  style={styles.modalActionButton}
+                  onPress={hideResultModal}
+                >
+                  <Text style={styles.modalActionText}>Got It</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </Animated.View>
+          </Animated.View>
+        </Modal>
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    backgroundColor: "#f0f4f8",
+    flex: 1,
   },
-  contentContainer: {
-    padding: 16,
-    paddingBottom: 30,
-  },
-  header: {
-    marginBottom: 20,
+  content: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#006666",
-    textAlign: "center",
-  },
-  tabContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#e0f2f1",
-    borderRadius: 10,
-    padding: 5,
-    marginBottom: 20,
-  },
-  tab: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    flexGrow: 1,
-    alignItems: "center",
-  },
-  activeTab: {
-    backgroundColor: "#006666",
-  },
-  tabText: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#006666",
-  },
-  activeTabText: {
-    color: "#fff",
-  },
-  gaugeContainer: {
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 25,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-    marginBottom: 25,
-    width: "100%",
-  },
-  gaugeTextContainer: {
-    alignItems: "center",
-  },
-  energyValueText: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#2c3e50",
-    marginBottom: 5,
+    color: "#001f3d",
+    marginBottom: 8,
+    textAlign: "center",
   },
-  powerText: {
-    fontSize: 18,
+  subtitle: {
+    fontSize: 16,
     color: "#7f8c8d",
+    textAlign: "center",
+    marginBottom: 30,
   },
-  tariffText: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginTop: 5,
-  },
-  rateText: {
-    fontSize: 16,
-    color: "#006666",
-    fontWeight: "bold",
-    marginTop: 10,
-  },
-  cardContainer: {
-    width: "100%",
-  },
-  card: {
+  uploadContainer: {
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    position: "relative",
+  },
+  uploadPlaceholder: {
+    height: 200,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f0f4f8",
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  uploadText: {
+    color: "#7f8c8d",
+    marginTop: 10,
+    fontSize: 16,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 15,
+    backgroundColor: "#f0f4f8",
+  },
+  removeButton: {
+    position: "absolute",
+    top: 15,
+    right: 15,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 15,
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  uploadButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#001f3d",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    width: "48%",
+    justifyContent: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#001f3d",
+    borderRadius: 8,
+    paddingVertical: 15,
+    marginBottom: 20,
+    shadowColor: "#001f3d",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  resultPreview: {
+    backgroundColor: "#fff",
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
   },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0f2f1",
-    paddingBottom: 10,
-  },
-  cardTitle: {
+  resultTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#006666",
-    marginLeft: 10,
+    color: "#001f3d",
+    marginBottom: 15,
   },
-  metricRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  metricLabel: {
-    fontSize: 16,
-    color: "#7f8c8d",
-  },
-  metricValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2c3e50",
-  },
-  thresholdContainer: {
-    marginTop: 5,
-  },
-  thresholdRow: {
+  resultRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 10,
   },
-  thresholdLabel: {
-    fontSize: 15,
+  resultLabel: {
+    fontSize: 16,
     color: "#7f8c8d",
   },
-  thresholdValue: {
-    fontSize: 15,
+  resultValue: {
+    fontSize: 16,
     fontWeight: "600",
-    color: "#e74c3c",
+    color: "#001f3d",
   },
-  updateText: {
-    fontSize: 12,
-    color: "#95a5a6",
+  detailsButton: {
+    marginTop: 15,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#e0e0e0",
+    alignItems: "center",
+  },
+  detailsButtonText: {
+    color: "#0066cc",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "80%",
+  },
+  modalScrollContent: {
+    padding: 25,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 15,
+    right: 15,
+    zIndex: 1,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    color: "#001f3d",
+    marginBottom: 20,
     textAlign: "center",
+  },
+  modalImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 10,
+    marginBottom: 20,
+    backgroundColor: "#f0f4f8",
+  },
+  damageInfo: {
+    marginBottom: 20,
+  },
+  infoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  infoLabel: {
+    fontSize: 16,
+    color: "#7f8c8d",
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#001f3d",
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#001f3d",
+    marginBottom: 15,
+  },
+  shopList: {
+    marginBottom: 20,
+  },
+  shopItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  shopInfo: {
+    flex: 1,
+  },
+  shopName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#001f3d",
+  },
+  shopAddress: {
+    fontSize: 14,
+    color: "#7f8c8d",
+    marginTop: 4,
+  },
+  shopDistance: {
+    fontSize: 14,
+    color: "#7f8c8d",
+    marginTop: 4,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalActionButton: {
+    backgroundColor: "#001f3d",
+    borderRadius: 8,
+    paddingVertical: 15,
+    alignItems: "center",
     marginTop: 10,
-    fontStyle: "italic",
+  },
+  modalActionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
 
-export default CostPrediction;
+export default DamageCostEstimator;

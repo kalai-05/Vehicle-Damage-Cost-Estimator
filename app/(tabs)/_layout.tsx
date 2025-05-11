@@ -18,7 +18,7 @@ export default function TabLayout() {
 
     screenOptions={{
     headerShown:false,
-    tabBarActiveTintColor: '#006666', // Set active color
+    tabBarActiveTintColor: '#001f3d', // Set active color
     tabBarInactiveTintColor: 'gray', // Optional: Set inactive color
     tabBarStyle: { backgroundColor: 'white' }, // Optional: Background color
   }}
@@ -29,14 +29,6 @@ export default function TabLayout() {
     options={{
       tabBarLabel: 'Home',
       tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
-    }}
-  />
-
-  <Tabs.Screen
-    name="explore"
-    options={{
-      tabBarLabel: 'Usage',
-      tabBarIcon: ({ color }) => <MaterialCommunityIcons name="chart-histogram" size={24} color={color} />,
     }}
   />
 

@@ -1,33 +1,49 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "CRASH",
+    "slug": "CRASH",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "icon": "./assets/images/logo.png",
+     "backgroundColor": "#001f3d",
+    "splash": {
+      "image": "./assets/images/logo_with_bg.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#001f3d"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "scheme": "CRASH",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/logo_with_bg.png", 
+        "backgroundColor": "#001f3d"
       }
     },
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/logo_with_bg.png",
+      "backgroundColor": "#001f3d"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
+          "image": "./assets/images/logo_with_bg.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#001f3d"
         }
       ],
       "expo-secure-store"
